@@ -2,6 +2,9 @@
 
 **Beautiful embroidery, made wonderfully simple.**
 
+> **🤝 New session? Cloud sandbox? START WITH [`HANDOFF.md`](HANDOFF.md)** — the portable
+> project brain: current state, both repos, all decisions, environment notes, next phases.
+
 Threadwell is a project to replace the overwhelming professional embroidery software (Floriani Total Control U) with something a 60–70 year old can use as easily as an iPhone — built specifically for a **Baby Lock Destiny** machine.
 
 There are **two front doors, one shared engine**:
