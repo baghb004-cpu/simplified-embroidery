@@ -1,35 +1,59 @@
 # Part 3: Product Inventory & Studio Presets
 
-> **STATUS: ⏳ BLOCKED — needs the product website URL.**
->
-> This document will hold the full inventory of every embroiderable product sold on the owner's website (including drop-ship items), with the dimensions and embroidery-area presets that power **Threadwell Studio**'s product picker and live animated preview.
->
-> **These presets are for the Studio website ONLY. The Windows desktop app does not include them.**
+*Built from **tuxedosonline.com** (Gohar's family's store) on 2026-07-22, via the site's Yoast product sitemap. These presets power **Threadwell Studio** (the website) only — the Windows app does not use them.*
 
-## What I will capture for every product (once I have the URL)
+## What we pulled
 
-For each product on the site that *can* take custom embroidery, the inventory will record:
+The store runs on **WooCommerce**. Its public REST/Store API is locked down (403), but the **XML sitemap** is open, so we read the complete product list (names + product images) straight from `product-sitemap.xml` — no page-by-page scraping needed.
 
-| Field | Example | Notes |
+| Number | Meaning |
+|---|---|
+| **751** | Total products on the site (the full inventory, including drop-ship items) |
+| **137** | Products that can take **custom embroidery** |
+| **614** | Non-embroiderable (ties, cufflinks, shoes, socks, belts, suspenders, hats, gloves, pants, etc.) |
+
+**Embroiderable breakdown:**
+
+| Type | Count | Notes |
 |---|---|---|
-| `product_name` | "Boys White Christening Suit — 5pc" | As listed on the site |
-| `sku` / `id` | e.g. `BAP-500` | For matching orders |
-| `category` | Baptism / Shirt / Polo / Baby / Hat / Towel… | Grouping in the picker |
-| `is_dropship` | true / false | Flagged separately |
-| `source_url` | link to the product page | Traceability |
-| `embroiderable` | true / false | Some items can't be embroidered — excluded from Studio |
-| `panels` | jacket back, left chest, collar, cuff… | The spots a name can go |
-| `panel_dimensions` | e.g. jacket back ≈ 200 × 250 mm | The embroidery **area**, per panel |
-| `max_design_mm` | per panel | Must also fit the Destiny hoop |
-| `default_placement` | e.g. "jacket back, arched" | Sensible default |
-| `preview_asset` | image/vector of the garment | Drives the animated preview |
+| **Dress / Tuxedo shirts** | 44 | Matches the site's own "Dress Shirts (43)" count. Men's, boys', women's. |
+| **Tuxedos / Suits / Jackets** | 59 | Includes boys' white & ivory tuxedos, first-communion & **christening** sets. |
+| **Vests** | 26 | Men's and boys'. |
+| **Cummerbunds** | 3 | |
+| **Pocket squares / hankies** | 5 | |
+| **Christening / baptism line** | 2 (flagged) | e.g. *"Infant Boys White Baptism Christening 5-Piece Set"* — your "white outfit." |
 
-## Honest notes to resolve with the owner
-1. **Embroidery-area dimensions are rarely published.** Product pages list garment *sizes* (e.g. chest 20"), not the printable/embroiderable *window* on each panel. Where the site doesn't state it, I will fill in **industry-standard embroidery placements** (e.g. left chest ≈ 4" wide, centered ~7" down from the shoulder seam) and flag each as `estimated` for the owner to confirm.
-2. **"Every possible embroiderable product."** I'll include every item that can realistically be embroidered and exclude ones that can't (e.g. hard goods, some synthetics). Drop-ship items are included and flagged.
-3. **Preview art.** The live animated preview needs a clean image or vector of each garment. I'll use product photos where usable and note where a better asset is needed.
+> The full raw inventory (all 751, name + URL + image) is in [`data/all-products.json`](../data/all-products.json). The embroiderable subset, with a garment type, product line, image, and default placement, is in [`apps/studio/presets/products.json`](../apps/studio/presets/products.json).
 
-## Output format
-The finished inventory will be saved as **both**:
-- `docs/03-product-inventory-and-presets.md` (human-readable, this file), and
-- `apps/studio/presets/products.json` (machine-readable presets the Studio loads).
+## The store's category tree (top level)
+
+Shirts (men's / boys' / women's · dress & tuxedo) · Tuxedos–Suits–Pants (men's / boys' / women's · incl. **boys' white/ivory tuxedos, first-communion & toddler suits**) · Vests & Cummerbunds · Ties (bow / neck) · Accessories (collar stays, lapel pins, gloves, hats, suspenders, socks/spats, belts/garters, button covers) · Jewelry (cufflinks/studs) · Shoes (men's / boys') · Occasions (weddings, homecoming, religious [confirmation, first communion], career/uniform, holiday) · Sale / New.
+
+## Embroidery-area presets (per garment type)
+
+Each embroiderable garment type has defined **panels** (where a name can go) with a starting embroidery-area size in millimeters. All areas fit the Baby Lock Destiny's 240 × 360 mm field.
+
+| Type | Panel | Area (mm) | Default | Note |
+|---|---|---|---|---|
+| **Shirt** | Left chest | 110 × 70 | ✓ | Classic monogram spot |
+| | Left cuff / Right cuff | 70 × 25 | | French/barrel cuff monogram |
+| | Collar band | 45 × 18 | | Hidden collar monogram |
+| | Center back yoke | 130 × 60 | | Below the collar |
+| **Tuxedo/Suit/Jacket** | Inside breast lining | 130 × 70 | ✓ | The traditional interior monogram |
+| | Exterior left chest | 90 × 55 | | Less common |
+| | Full back (showpiece) | 200 × 260 | | Large arched name — christening showpiece |
+| **Vest** | Center back | 180 × 140 | ✓ | Large back panel |
+| | Lower left front | 80 × 55 | | Discreet monogram |
+| **Cummerbund** | Front center | 120 × 45 | ✓ | Across the pleats |
+| **Pocket square** | Corner | 45 × 45 | ✓ | Small initials |
+| **Robe** | Left chest / Full back | 110 × 70 / 230 × 300 | ✓ | (type included for completeness) |
+
+## Honest notes (read before production)
+
+1. **Embroidery-area dimensions are industry-standard *estimates*** (every panel is tagged `estimated: true`). The store lists garment sizes, not the stitchable window on a collar or cuff. **Confirm each against a real garment before stitching for a customer.**
+2. **Product names come from URL slugs.** Most are clean ("Slim Fit Notch Lapel Tuxedo"); some legacy items are cryptic codes ("Bntvest"). The Studio therefore leads with the **product photo** (visual recognition), which every product has. *Follow-up enhancement:* fetch each product page's real title to replace slug-names (≈137 pages).
+3. **Classification is keyword-based** on the product slug. It's accurate for the bulk, but a few edge cases may be miscategorized — easy to correct in `products.json`.
+4. **The christening/baptism line is small on this site** (2 clearly tagged). Boys' white/ivory tuxedos and first-communion suits (in the 59 jackets/suits) also serve that "white outfit" purpose.
+
+## How the Studio uses this
+`products.json` → the Studio's product picker (image + name + type). Picking a product loads its type's **panels** as tappable placement dots, and the panel's mm size scales the **live embroidery preview**. Rebuild anytime with `scripts/build-inventory.ps1`.
