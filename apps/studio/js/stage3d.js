@@ -25,6 +25,13 @@ function weaveTexture(kind) {
       g.addColorStop(0, '#e9e9e9'); g.addColorStop(.5, '#bdbdbd'); g.addColorStop(1, '#a9a9a9');
       x.fillStyle = g; x.fillRect(0, y, 256, 32);
     }
+  } else if (kind === 'terry') {             // towel terry: dense looped pile
+    x.fillStyle = '#c9c9c9'; x.fillRect(0, 0, 256, 256);
+    for (let n = 0; n < 5200; n++) {
+      const px = Math.random() * 256, py = Math.random() * 256, r = 1 + Math.random() * 1.8;
+      x.fillStyle = Math.random() > .5 ? 'rgba(255,255,255,.30)' : 'rgba(0,0,0,.16)';
+      x.beginPath(); x.arc(px, py, r, 0, 7); x.fill();
+    }
   } else if (kind === 'satin') {             // lining satin: soft vertical sheen
     for (let i = 0; i < 256; i += 4) {
       const v = 200 + Math.round(30 * Math.sin(i * .3));
@@ -154,8 +161,8 @@ function fabricMat(color, kind) {
   const t = weaveTexture(kind || 'twill');
   t.repeat.set(kind === 'pleat' ? 2 : 3, kind === 'pleat' ? 1 : 2);
   return new THREE.MeshStandardMaterial({
-    color, map: t, bumpMap: t, bumpScale: kind === 'satin' ? .12 : .4,
-    roughness: kind === 'satin' ? .35 : .82, side: THREE.DoubleSide
+    color, map: t, bumpMap: t, bumpScale: kind === 'satin' ? .12 : kind === 'terry' ? .9 : .4,
+    roughness: kind === 'satin' ? .35 : kind === 'terry' ? .96 : .82, side: THREE.DoubleSide
   });
 }
 function makeDecal(radius, height, theta, curved) {
@@ -269,7 +276,7 @@ function buildStage(cfg) {
   else {                                                    // generic curved fabric panel
     const w = Math.max(90, (cfg.panelMM?.[0] || 130) * 1.15);
     const h = Math.max(60, (cfg.panelMM?.[1] || 70) * 1.15);
-    const kind = cfg.satin ? 'satin' : 'twill';
+    const kind = cfg.weave || (cfg.satin ? 'satin' : 'twill');
     const panel = new THREE.Mesh(billow(new THREE.PlaneGeometry(w, h, 48, 32), Math.min(w, h) * .05), fabricMat(fab, kind));
     root.add(panel);
     const d = makeDecal(w * .84, h * .62, 0, false);

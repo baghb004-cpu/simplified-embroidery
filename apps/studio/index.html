@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Threadwell Studio — Order Embroidery in 3D</title>
+<title>Lusik &amp; Sons — Custom Embroidery Studio</title>
 <link rel="stylesheet" href="./css/studio.css">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <div class="brand"><span>Threadwell</span><span class="stitch"></span><small>Studio</small></div>
+  <div class="brand"><span>Lusik &amp; Sons</span><span class="stitch"></span><small>Custom Embroidery</small></div>
   <button class="step-back" id="backBtn" style="display:none">‹ Back</button>
   <span class="who" id="who"></span>
 </div></header>
@@ -19,12 +19,14 @@
   <!-- SIGN IN -->
   <section class="screen on" data-screen="signin">
     <div class="hero">
-      <div class="eyebrow">Order Embroidery</div>
-      <h1 style="font-size:34px">Welcome to Threadwell Studio</h1>
+      <div class="eyebrow">Lusik's Workshop · Armenia → California</div>
+      <h1 style="font-size:34px">Custom Embroidery Studio</h1>
       <div class="stitch-lg"></div>
-      <p class="sub" style="margin-bottom:26px">Put a name or monogram on any tuxedo, shirt, or vest — and watch it stitch itself on in live 3D. English, Español, Հայերեն.</p>
-      <button class="btn-go wide" data-go="catalog" onclick="signIn('Gohar')">Start an order</button>
-      <p style="color:var(--ink-soft);font-size:13px;margin-top:16px">Demo sign-in · in the real app this is a private link for Gohar &amp; his dad only.</p>
+      <p class="sub" style="margin-bottom:26px">Tuxedos, shirts, towels, blankets — pick the item, watch the name stitch itself on in live 3D, send the order. English, Español, Հայերեն.</p>
+      <button class="btn-go wide" data-go="catalog" onclick="signIn('Gohar','company')">Tuxedos Online — Company Account</button>
+      <div style="height:12px"></div>
+      <button class="btn-ghost" style="width:100%" data-go="catalog" onclick="signIn('Guest','public')">I'm new — request a custom quote</button>
+      <p style="color:var(--ink-soft);font-size:13px;margin-top:16px">Demo sign-in · in the real app the company button is a private link for Gohar &amp; Vrej (Tuxedos Online); company orders are invoiced per order.</p>
     </div>
   </section>
 
@@ -55,6 +57,7 @@
           <div class="viewer-fallback" id="viewerFallback" style="display:none">3D isn’t available on this device — the photo preview below shows your design.</div>
         </div>
         <div class="photo-card" id="photoCard">
+          <div class="photo-emoji" id="photoEmoji" style="display:none"></div>
           <img class="garment" id="garmentImg" alt="">
           <div class="photo-note">Tap a numbered dot to choose where the embroidery goes.</div>
         </div>
@@ -113,13 +116,14 @@
   <section class="screen" data-screen="sent">
     <div class="done">
       <div class="big">🎉</div>
-      <h1>Order sent!</h1>
+      <h1 id="sentTitle">Order sent!</h1>
       <div class="summary" id="orderSummary"></div>
       <button class="btn-ghost" data-go="catalog" onclick="resetOrder()">Start another order</button>
       <div class="todo">
         <b>What happens next (in the real build):</b> pressing Send calls a small render worker that turns the design
-        into a machine-ready <code>.pes</code> file, renders a preview, and emails both to you and your mom.
-        In this demo the file/email step is stubbed — the engine (<code>engine/</code>) and Netlify function are the next build phase.
+        into a machine-ready <code>.pes</code> file, renders a preview, and emails everything to Lusik &amp; Sons —
+        plus, for company-account orders, an auto-numbered invoice; public requests arrive as quotes to price first.
+        In this demo the file/email/invoice step is stubbed — the engine (<code>engine/</code>) and Netlify function are the next build phase.
       </div>
     </div>
   </section>

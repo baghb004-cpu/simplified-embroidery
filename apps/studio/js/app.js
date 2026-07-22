@@ -6,6 +6,7 @@
 var DATA = null;
 var state = {
   product: null, panel: null,
+  account: 'company',                 // 'company' (Tuxedos Online, invoiced) | 'public' (quote request)
   mode: 'name',                       // 'name' | 'mono'
   lang: 'en', style: 'print', text: 'Gohar', translit: 'Gohar',
   mono: { f: 'G', m: 'A', l: 'H' }, monoStyle: 'classic',
@@ -13,23 +14,40 @@ var state = {
 };
 var THREADS = [['Navy', '#1f2f6b'], ['Black', '#141414'], ['White', '#f4f2ea'], ['Gold', '#b8912e'], ['Burgundy', '#6d1b2e'], ['Silver', '#9aa1ac']];
 var FABRICS = [['White', '#f4f2ec'], ['Ivory', '#efe6cf'], ['Black', '#1b1b1e'], ['Navy', '#232c44'], ['Burgundy', '#58222c'], ['Silver', '#c9ccd2']];
-var TYPE_LABELS = { all: 'All', shirt: 'Shirts', jacket_suit: 'Suits & Tuxedos', vest: 'Vests', cummerbund: 'Cummerbunds', pocket_square: 'Pocket squares', robe: 'Robes' };
+var TYPE_LABELS = {
+  all: 'All', shirt: 'Shirts', jacket_suit: 'Suits & Tuxedos', vest: 'Vests', cummerbund: 'Cummerbunds', pocket_square: 'Pocket squares', robe: 'Robes',
+  household: 'Household', towel_bath: 'Bath towel', towel_hand: 'Hand towel', towel_kitchen: 'Kitchen towel',
+  blanket: 'Blanket', pillowcase: 'Pillowcase', napkin: 'Napkin', table_runner: 'Table runner', apron: 'Apron'
+};
 var PANEL_POS = {
   left_chest: { x: .34, y: .36, w: .22, h: .11 }, left_cuff: { x: .19, y: .74, w: .14, h: .06 }, right_cuff: { x: .81, y: .74, w: .14, h: .06 },
   collar_band: { x: .5, y: .13, w: .16, h: .05 }, back_yoke: { x: .5, y: .22, w: .34, h: .1 },
   interior_lining: { x: .37, y: .42, w: .2, h: .1 }, back_showpiece: { x: .5, y: .44, w: .56, h: .34 },
   back: { x: .5, y: .46, w: .54, h: .32 }, front_left: { x: .36, y: .42, w: .16, h: .09 },
-  front_center: { x: .5, y: .5, w: .6, h: .18 }, corner: { x: .34, y: .44, w: .12, h: .09 }
+  front_center: { x: .5, y: .5, w: .6, h: .18 }, corner: { x: .3, y: .62, w: .2, h: .12 },
+  hem_band: { x: .5, y: .72, w: .6, h: .12 }, center: { x: .5, y: .45, w: .55, h: .26 },
+  end_panel: { x: .5, y: .74, w: .5, h: .16 }, chest: { x: .5, y: .34, w: .34, h: .16 }
 };
 var STAGE_FOR = { left_cuff: 'cuff', right_cuff: 'cuff', collar_band: 'collar', front_center: 'band', corner: 'pocket' };
 var STAGE_NAMES = { cuff: 'THE CUFF — live 3D', collar: 'THE COLLAR — live 3D', band: 'CUMMERBUND — live 3D', pocket: 'POCKET SQUARE — live 3D', panel: 'FABRIC PANEL — live 3D' };
 
 /* ---------------- boot ---------------- */
-fetch('./presets/products.json').then(function (r) { return r.json(); }).then(function (d) {
-  DATA = d; buildChips(); renderGrid(); renderSwatches();
+Promise.all([
+  fetch('./presets/products.json').then(function (r) { return r.json(); }),
+  fetch('./presets/household.json').then(function (r) { return r.json(); })
+]).then(function (both) {
+  DATA = both[0];
+  var hh = both[1];
+  Object.keys(hh.garmentTypes).forEach(function (k) { DATA.garmentTypes[k] = hh.garmentTypes[k]; });
+  DATA.products = DATA.products.concat(hh.products);
+  DATA.counts.household = hh.products.length;
+  buildChips(); renderGrid(); renderSwatches();
 }).catch(function () { document.getElementById('grid').innerHTML = '<div class="loading">Could not load the catalog.</div>'; });
 
-function signIn(name) { document.getElementById('who').textContent = 'Hi, ' + name; }
+function signIn(name, account) {
+  state.account = account || 'company';
+  document.getElementById('who').textContent = (state.account === 'company' ? 'Tuxedos Online · ' : 'Quote · ') + name;
+}
 window.signIn = signIn;
 
 /* ---------------- navigation ---------------- */
@@ -52,9 +70,10 @@ window.resetOrder = function () { state.product = null; state.panel = null; go('
 /* ---------------- catalog ---------------- */
 var typeFilter = 'all';
 function buildChips() {
-  var el = document.getElementById('typeChips'); var order = ['all', 'shirt', 'jacket_suit', 'vest', 'cummerbund', 'pocket_square'];
-  el.innerHTML = order.filter(function (k) { return k === 'all' || DATA.counts.by_type[k]; }).map(function (k) {
-    var n = k === 'all' ? DATA.counts.embroiderable : DATA.counts.by_type[k];
+  var el = document.getElementById('typeChips'); var order = ['all', 'shirt', 'jacket_suit', 'vest', 'cummerbund', 'pocket_square', 'household'];
+  el.innerHTML = order.filter(function (k) { return k === 'all' || k === 'household' || DATA.counts.by_type[k]; }).map(function (k) {
+    var n = k === 'all' ? (DATA.counts.embroiderable + DATA.counts.household)
+      : k === 'household' ? DATA.counts.household : DATA.counts.by_type[k];
     return '<button class="chip' + (k === 'all' ? ' on' : '') + '" data-type="' + k + '">' + TYPE_LABELS[k] + ' (' + n + ')</button>';
   }).join('');
   el.querySelectorAll('.chip').forEach(function (c) {
@@ -69,7 +88,8 @@ function renderGrid() {
   if (!DATA) return;
   var q = document.getElementById('q').value.trim().toLowerCase();
   var list = DATA.products.filter(function (p) {
-    if (typeFilter !== 'all' && p.type !== typeFilter) return false;
+    if (typeFilter === 'household') { if (p.line !== 'household') return false; }
+    else if (typeFilter !== 'all' && p.type !== typeFilter) return false;
     if (q && p.name.toLowerCase().indexOf(q) < 0) return false;
     return true;
   });
@@ -77,11 +97,14 @@ function renderGrid() {
   var g = document.getElementById('grid');
   if (!list.length) { g.innerHTML = '<div class="loading">No products match. Try another search.</div>'; return; }
   g.innerHTML = list.slice(0, 300).map(function (p) {
+    var visual = p.img ? '<img loading="lazy" src="' + p.img + '" alt="" onerror="this.style.display=\'none\'">'
+      : '<span class="icon-tile">' + (p.icon || '🧵') + '</span>';
+    var tag = p.tag ? '<span class="tag xmas">' + esc(p.tag) + '</span>'
+      : p.christening ? '<span class="tag xmas">Christening</span>'
+        : '<span class="tag">' + (TYPE_LABELS[p.type] || p.type) + '</span>';
     return '<button class="prod" data-i="' + DATA.products.indexOf(p) + '">' +
-      '<span class="ph">' + (p.img ? '<img loading="lazy" src="' + p.img + '" alt="" onerror="this.style.display=\'none\'">' : '') + '</span>' +
-      '<span class="cap"><b>' + esc(p.name) + '</b>' +
-      (p.christening ? '<span class="tag xmas">Christening</span>' : '<span class="tag">' + (TYPE_LABELS[p.type] || p.type) + '</span>') +
-      '</span></button>';
+      '<span class="ph">' + visual + '</span>' +
+      '<span class="cap"><b>' + esc(p.name) + '</b>' + tag + '</span></button>';
   }).join('');
   g.querySelectorAll('.prod').forEach(function (b) { b.onclick = function () { pickProduct(DATA.products[+b.dataset.i]); }; });
 }
@@ -95,6 +118,7 @@ function fabricFromName(p) {
   ['grey', '#8f939b'], ['gray', '#8f939b'], ['silver', '#c9ccd2'], ['gold', '#b8912e'], ['pink', '#c26b8f'], ['fuchsia', '#b04a7e'],
   ['green', '#274b33'], ['purple', '#4b2a5e'], ['brown', '#6b4a33'], ['tan', '#a58a66']];
   for (var i = 0; i < m.length; i++) if (s.indexOf(m[i][0]) >= 0) return m[i][1];
+  if (p.line === 'household') return /blanket|napkin|table_runner/.test(p.type) ? '#efe6cf' : '#f4f2ec';
   return p.type === 'jacket_suit' ? '#1b1b1e' : '#f4f2ec';
 }
 function luminance(hex) {
@@ -106,8 +130,14 @@ function pickProduct(p) {
   state.fabric = fabricFromName(p);
   state.thread = luminance(state.fabric) < .42 ? '#f4f2ea' : '#1f2f6b';
   document.getElementById('cName').textContent = p.name;
-  var img = document.getElementById('garmentImg'); img.src = p.img || ''; img.alt = p.name;
-  img.onload = drawPlacement;
+  var img = document.getElementById('garmentImg'), pe = document.getElementById('photoEmoji');
+  if (p.img) {
+    img.style.display = ''; pe.style.display = 'none';
+    img.src = p.img; img.alt = p.name; img.onload = drawPlacement;
+  } else {
+    img.style.display = 'none'; img.removeAttribute('src');
+    pe.style.display = 'flex'; pe.textContent = p.icon || '🧵';
+  }
   markSwatches();
   go('customize'); updateTranslit(); drawPlacement();
   mount3D(); update3D('slow');
@@ -176,9 +206,11 @@ function update3D(speed) {
   var pan = currentPanel();
   var stage = STAGE_FOR[pan.id] || 'panel';
   document.getElementById('viewerTitle').textContent = STAGE_NAMES[stage];
+  var weave;
+  if (state.product.line === 'household' && /^(towel|robe)/.test(state.product.type)) weave = 'terry';
   window.Stage3D.update({
     stage: stage, panelMM: pan.area_mm,
-    fabric: state.fabric, satin: pan.id === 'interior_lining',
+    fabric: state.fabric, satin: pan.id === 'interior_lining', weave: weave,
     thread: state.thread,
     mode: state.mode, text: displayString(),
     mono: state.mono, monoStyle: state.monoStyle, style: state.style,
@@ -270,9 +302,23 @@ function prepareSummary() {
   var modeLine = state.mode === 'mono'
     ? 'Monogram (' + state.monoStyle + '): ' + displayString()
     : ({ en: 'English', es: 'Español', hy: 'Armenian' }[state.lang]) + ' · ' + state.style + ': ' + displayString();
+  var billing, footer;
+  if (state.account === 'company') {
+    var n = parseInt(localStorage.getItem('ls_seq') || '0', 10) + 1;
+    localStorage.setItem('ls_seq', String(n));
+    var invNo = 'LS-2026-' + ('000' + n).slice(-3);
+    billing = 'Invoice <b>' + invNo + '</b> · billed to the Tuxedos Online company account';
+    footer = 'Design + invoice emailed to Lusik &amp; Sons and the company account (demo).';
+    document.getElementById('sentTitle').textContent = 'Order sent!';
+  } else {
+    billing = '<b>Quote request</b> — Lusik &amp; Sons will email a price before any stitching';
+    footer = 'Request emailed to Lusik &amp; Sons — you\'ll get a reply with the price (demo).';
+    document.getElementById('sentTitle').textContent = 'Quote request sent!';
+  }
   document.getElementById('orderSummary').innerHTML =
     '<b>' + esc(displayString()) + '</b> on <b>' + esc(p.name) + '</b><br>' +
     'Placement: ' + pan.label + ' · ' + pan.area_mm[0] + '×' + pan.area_mm[1] + ' mm<br>' +
     esc(modeLine) + '<br>Thread ' + state.thread + ' · Fabric ' + state.fabric + '<br>' +
-    '<span style="font-size:13px;color:var(--ink-soft)">Emailed to you &amp; your mom (demo).</span>';
+    billing + '<br>' +
+    '<span style="font-size:13px;color:var(--ink-soft)">' + footer + '</span>';
 }
