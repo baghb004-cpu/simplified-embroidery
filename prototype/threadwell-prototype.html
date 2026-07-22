@@ -1,0 +1,754 @@
+<title>Threadwell — tap-through prototype</title>
+
+<style>
+  /* ============================================================
+     THREADWELL — feel-mockup
+     App UI uses the device's own system font (San Francisco on
+     iPhone) so it looks native to the person it's built for.
+     Signature motif: plum "running-stitch" dashes, like real floss.
+     Green = go, Amber = warning, Red = danger (never decoration).
+     ============================================================ */
+
+  :root{
+    /* --- warm craft-table backdrop (theme-aware) --- */
+    --bg-1:#efe8da;
+    --bg-2:#e3d7c1;
+    --stage-ink:#5a5040;
+    --stage-ink-soft:#8a7c66;
+    --shadow:rgba(60,44,20,.20);
+    --shadow-lift:rgba(60,44,20,.28);
+
+    /* --- the app surface (deliberately bright + high-contrast in
+           BOTH themes: the product's accessibility spec mandates a
+           near-white ground for aging eyes) --- */
+    --screen:#ffffff;
+    --ink:#1f1c18;          /* warm near-black, ~15:1 on white */
+    --ink-soft:#5a544b;     /* ~7:1 on white */
+    --line:#e8e1d3;
+    --line-strong:#d6cbb6;
+    --tile:#ffffff;
+    --tile-press:#f4efe4;
+
+    --go:#0b7a3b;           /* the ONLY "go" color */
+    --go-press:#095f2e;
+    --go-tint:#e7f3ec;
+    --warn:#8a5200;
+    --warn-bg:#fbf1de;
+    --warn-line:#e7c48a;
+    --danger:#b00020;
+
+    --thread:#8e3b62;       /* plum floss — brand + progress only */
+    --thread-tint:#f3e5ec;
+
+    --r-lg:26px;
+    --r-md:20px;
+    --r-sm:14px;
+
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg-1:#221d17;
+      --bg-2:#14100b;
+      --stage-ink:#d6ccba;
+      --stage-ink-soft:#a89c86;
+      --shadow:rgba(0,0,0,.5);
+      --shadow-lift:rgba(0,0,0,.62);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg-1:#221d17; --bg-2:#14100b;
+    --stage-ink:#d6ccba; --stage-ink-soft:#a89c86;
+    --shadow:rgba(0,0,0,.5); --shadow-lift:rgba(0,0,0,.62);
+  }
+  :root[data-theme="light"]{
+    --bg-1:#efe8da; --bg-2:#e3d7c1;
+    --stage-ink:#5a5040; --stage-ink-soft:#8a7c66;
+    --shadow:rgba(60,44,20,.20); --shadow-lift:rgba(60,44,20,.28);
+  }
+
+  *{box-sizing:border-box}
+
+  .stage{
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:18px;
+    padding:28px 16px 40px;
+    background:
+      radial-gradient(120% 80% at 50% -10%, color-mix(in srgb,var(--bg-1) 92%, #fff) 0%, var(--bg-1) 45%, var(--bg-2) 100%);
+    font-family:var(--font);
+    color:var(--stage-ink);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .stage-eyebrow{
+    margin:2px 0 0;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--stage-ink-soft);
+    text-align:center;
+    display:flex;align-items:center;gap:12px;
+  }
+  .stage-eyebrow::before,.stage-eyebrow::after{
+    content:"";width:34px;height:3px;border-radius:2px;
+    background-image:linear-gradient(90deg,var(--thread) 55%,transparent 55%);
+    background-size:9px 3px;opacity:.7;
+  }
+
+  /* ===================== PHONE ===================== */
+  .phone{
+    width:min(392px,94vw);
+    aspect-ratio:392/812;
+    background:linear-gradient(160deg,#2a2622,#0a0908);
+    border-radius:56px;
+    padding:13px;
+    box-shadow:
+      0 2px 4px rgba(0,0,0,.4),
+      0 26px 60px -12px var(--shadow-lift),
+      inset 0 0 0 2px rgba(255,255,255,.06);
+    position:relative;
+    flex:0 0 auto;
+  }
+  .screen{
+    position:relative;
+    width:100%;height:100%;
+    background:var(--screen);
+    border-radius:44px;
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    color:var(--ink);
+    isolation:isolate;
+  }
+  .island{
+    position:absolute;top:11px;left:50%;transform:translateX(-50%);
+    width:112px;height:32px;background:#000;border-radius:20px;z-index:40;
+  }
+  .statusbar{
+    height:52px;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 30px 0;
+    font-size:15px;font-weight:600;color:var(--ink);
+    letter-spacing:.02em;
+  }
+  .statusbar .sig{letter-spacing:2px;font-size:12px}
+
+  /* ---- top navigation bar (hidden on home) ---- */
+  .topbar{
+    flex:0 0 auto;
+    display:none;
+    align-items:center;justify-content:space-between;
+    padding:4px 14px 8px;
+    gap:8px;
+  }
+  .screen[data-chrome="app"] .topbar{display:flex}
+  .navbtn{
+    font-family:var(--font);
+    display:inline-flex;align-items:center;gap:5px;
+    min-height:44px;padding:6px 12px;
+    border:none;background:transparent;color:var(--go);
+    font-size:18px;font-weight:600;border-radius:12px;cursor:pointer;
+  }
+  .navbtn:active{background:var(--tile-press)}
+  .navbtn.icon{color:var(--ink);font-size:20px}
+  .navbtn.read{
+    color:var(--thread);border:2px solid var(--thread-tint);
+    background:var(--thread-tint);
+  }
+  .navbtn .spk{font-size:19px}
+
+  /* ---- scrolling content area ---- */
+  .content{
+    flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:6px 22px 20px;
+  }
+  .content::-webkit-scrollbar{width:0}
+
+  /* ---- views ---- */
+  .view{display:none;animation:fade .28s ease both}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h1.title{
+    font-size:33px;line-height:1.12;font-weight:800;letter-spacing:-.02em;
+    margin:10px 2px 6px;text-wrap:balance;color:var(--ink);
+  }
+  p.lede{font-size:19px;line-height:1.4;color:var(--ink-soft);margin:0 2px 18px}
+
+  /* ---- big stacked tiles (home / help) ---- */
+  .stack{display:flex;flex-direction:column;gap:16px}
+  .bigtile{
+    font-family:var(--font);text-align:left;cursor:pointer;
+    display:flex;align-items:center;gap:18px;
+    width:100%;min-height:96px;padding:20px 22px;
+    background:var(--tile);color:var(--ink);
+    border:2px solid var(--line-strong);border-radius:var(--r-md);
+    box-shadow:0 3px 0 var(--line);
+    transition:transform .12s ease, box-shadow .12s ease, background .12s;
+  }
+  .bigtile:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line);background:var(--tile-press)}
+  .bigtile.primary{
+    border-color:var(--go);background:var(--go-tint);
+    box-shadow:0 3px 0 color-mix(in srgb,var(--go) 30%, #fff);
+  }
+  .bigtile .emoji{font-size:44px;line-height:1;flex:0 0 auto;filter:saturate(1.05)}
+  .bigtile .tt{display:flex;flex-direction:column;gap:3px}
+  .bigtile .tt b{font-size:24px;font-weight:800;letter-spacing:-.01em}
+  .bigtile .tt span{font-size:16px;color:var(--ink-soft);font-weight:500}
+  .bigtile .chev{margin-left:auto;font-size:26px;color:var(--ink-soft);flex:0 0 auto}
+
+  /* ---- search + chips ---- */
+  .search{
+    display:flex;align-items:center;gap:12px;
+    height:62px;padding:0 18px;margin:2px 0 16px;
+    background:var(--tile-press);border:2px solid var(--line-strong);
+    border-radius:18px;color:var(--ink-soft);font-size:20px;
+  }
+  .search .mic{margin-left:auto;font-size:22px}
+  .chips{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  .chip{
+    font-family:var(--font);cursor:pointer;
+    padding:10px 18px;min-height:44px;font-size:17px;font-weight:700;
+    border-radius:999px;border:2px solid var(--line-strong);
+    background:var(--tile);color:var(--ink);
+  }
+  .chip:active{background:var(--tile-press)}
+  .chip.on{background:var(--thread);border-color:var(--thread);color:#fff}
+
+  /* ---- picture grid (designs + items) ---- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .pic{
+    font-family:var(--font);cursor:pointer;border:none;background:none;padding:0;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .pic .art{
+    aspect-ratio:1;border-radius:var(--r-md);
+    display:flex;align-items:center;justify-content:center;
+    font-size:58px;
+    border:2px solid rgba(0,0,0,.06);
+    box-shadow:0 4px 12px -4px var(--shadow);
+    transition:transform .12s ease;
+  }
+  .pic:active .art{transform:scale(.96)}
+  .pic b{font-size:19px;font-weight:700;text-align:center;color:var(--ink)}
+
+  /* ---- size screen ---- */
+  .preview-card{
+    border-radius:var(--r-md);padding:22px;margin:2px 0 4px;
+    display:flex;align-items:center;justify-content:center;position:relative;
+    min-height:180px;border:2px solid var(--line);
+    background:
+      repeating-linear-gradient(90deg,#efe7d8 0 9px,#e9e0cd 9px 18px);
+  }
+  .preview-card .fabric-tag{
+    position:absolute;top:12px;left:14px;font-size:13px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;color:#9a8b6f;
+  }
+  .preview-card .motif{font-size:96px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.18))}
+
+  .bignum{
+    text-align:center;font-size:44px;font-weight:800;letter-spacing:-.02em;
+    margin:16px 0 2px;color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .fitline{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    font-size:19px;font-weight:700;color:var(--go);margin-bottom:18px;
+  }
+  .fitline .dot{width:12px;height:12px;border-radius:50%}
+
+  .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:8px}
+  .opt{
+    font-family:var(--font);cursor:pointer;
+    min-height:112px;padding:14px 8px;border-radius:var(--r-sm);
+    border:2px solid var(--line-strong);background:var(--tile);color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    font-size:20px;font-weight:800;transition:transform .1s;
+  }
+  .opt:active{transform:translateY(2px)}
+  .opt small{font-size:14px;font-weight:600;color:var(--ink-soft)}
+  .opt .mark{font-size:22px;height:24px}
+  .opt.on{border-color:var(--go);background:var(--go-tint);color:var(--go)}
+  .opt.on .mark{color:var(--go)}
+  .opt.blocked{
+    border-color:var(--warn-line);background:var(--warn-bg);color:var(--warn);
+    cursor:not-allowed;
+  }
+  .opt.blocked small{color:var(--warn)}
+
+  /* ---- colors screen ---- */
+  .swatches{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px}
+  .look{
+    font-family:var(--font);cursor:pointer;
+    min-height:92px;padding:14px 16px;border-radius:var(--r-sm);
+    border:2px solid var(--line-strong);background:var(--tile);color:var(--ink);
+    display:flex;align-items:center;gap:14px;font-size:21px;font-weight:800;
+  }
+  .look:active{background:var(--tile-press)}
+  .look.on{border-color:var(--go);box-shadow:0 0 0 3px var(--go-tint)}
+  .look .dots{display:flex;flex:0 0 auto}
+  .look .dots i{width:20px;height:26px;border-radius:6px;display:block;margin-left:-6px;border:2px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+  .look .dots i:first-child{margin-left:0}
+
+  .safe-chip{
+    display:flex;align-items:center;gap:10px;
+    margin:16px 0 4px;padding:14px 16px;border-radius:14px;
+    background:var(--go-tint);border:2px solid color-mix(in srgb,var(--go) 24%,#fff);
+    color:var(--go);font-weight:700;font-size:16px;
+  }
+
+  /* ---- confirm / stick screen ---- */
+  .summary{
+    background:var(--tile-press);border:2px solid var(--line);border-radius:var(--r-md);
+    padding:18px 20px;margin:2px 0 18px;font-size:19px;line-height:1.45;color:var(--ink);
+  }
+  .summary b{font-weight:800}
+  .checklist{list-style:none;margin:0 0 4px;padding:0;display:flex;flex-direction:column;gap:12px}
+  .checklist li{
+    display:flex;align-items:center;gap:14px;font-size:20px;font-weight:700;color:var(--ink);
+    opacity:.32;transform:translateX(-4px);transition:opacity .3s,transform .3s;
+  }
+  .checklist li.done{opacity:1;transform:none;color:var(--go)}
+  .checklist li .box{
+    width:34px;height:34px;border-radius:10px;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--line);color:transparent;font-size:20px;font-weight:900;
+  }
+  .checklist li.done .box{background:var(--go);color:#fff}
+
+  .success{text-align:center;padding:24px 6px}
+  .success .party{font-size:88px;line-height:1}
+  .success h2{font-size:32px;font-weight:900;margin:12px 0 6px;color:var(--ink)}
+  .success p{font-size:19px;color:var(--ink-soft);margin:0 0 8px}
+  .stick-illo{font-size:56px;margin:14px 0}
+
+  .answer{
+    background:var(--go-tint);border:2px solid color-mix(in srgb,var(--go) 22%,#fff);
+    border-radius:var(--r-md);padding:20px;margin-top:16px;font-size:20px;line-height:1.5;color:var(--ink);
+  }
+  .answer b{color:var(--go)}
+
+  /* ---- primary go button ---- */
+  .go{
+    font-family:var(--font);cursor:pointer;
+    width:100%;min-height:68px;margin-top:8px;
+    background:var(--go);color:#fff;border:none;border-radius:20px;
+    font-size:23px;font-weight:800;letter-spacing:.01em;
+    box-shadow:0 4px 0 var(--go-press);
+    transition:transform .1s, box-shadow .1s;
+  }
+  .go:active{transform:translateY(3px);box-shadow:0 1px 0 var(--go-press)}
+  .go.ghost{background:var(--tile);color:var(--go);border:2px solid var(--go);box-shadow:0 3px 0 var(--go-tint)}
+
+  /* ---- bottom progress (running stitch) ---- */
+  .progress{
+    flex:0 0 auto;display:none;
+    align-items:center;justify-content:center;gap:0;
+    padding:12px 22px 26px;
+  }
+  .screen[data-progress="on"] .progress{display:flex}
+  .progress .node{
+    width:15px;height:15px;border-radius:50%;flex:0 0 auto;
+    background:var(--tile);border:3px solid var(--line-strong);z-index:2;
+  }
+  .progress .node.done{background:var(--thread);border-color:var(--thread)}
+  .progress .node.now{background:#fff;border-color:var(--thread);box-shadow:0 0 0 4px var(--thread-tint)}
+  .progress .seg{
+    width:34px;height:3px;flex:0 0 auto;
+    background-image:linear-gradient(90deg,var(--line-strong) 55%,transparent 55%);
+    background-size:8px 3px;
+  }
+  .progress .seg.done{background-image:linear-gradient(90deg,var(--thread) 55%,transparent 55%);background-size:8px 3px}
+
+  /* ---- home wordmark ---- */
+  .brand{padding:14px 22px 2px;text-align:center}
+  .brand .mark{font-size:38px;font-weight:900;letter-spacing:-.02em;color:var(--ink)}
+  .brand .stitch{
+    height:5px;width:172px;margin:6px auto 4px;border-radius:3px;
+    background-image:linear-gradient(90deg,var(--thread) 58%,transparent 58%);
+    background-size:14px 5px;
+  }
+  .brand .tag{font-size:16px;color:var(--ink-soft);font-weight:600}
+
+  /* stage footer */
+  .stage-foot{
+    max-width:392px;text-align:center;font-size:14.5px;line-height:1.55;
+    color:var(--stage-ink-soft);margin:2px 0 0;
+  }
+  .stage-foot b{color:var(--stage-ink)}
+
+  :focus-visible{outline:3px solid var(--thread);outline-offset:2px;border-radius:8px}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  }
+</style>
+
+<div class="stage">
+  <p class="stage-eyebrow">Working feel-mockup · everything taps</p>
+
+  <div class="phone">
+    <div class="screen" id="screen" data-chrome="home" role="application" aria-label="Threadwell app">
+      <div class="island" aria-hidden="true"></div>
+      <div class="statusbar"><span>9:41</span><span class="sig">Threadwell</span></div>
+
+      <!-- top bar -->
+      <div class="topbar">
+        <button class="navbtn" id="btnBack" type="button">‹ Back</button>
+        <button class="navbtn icon" id="btnHome" type="button" aria-label="Home">🏠</button>
+        <button class="navbtn read" id="btnRead" type="button"><span class="spk">🔊</span> Read to me</button>
+      </div>
+
+      <div class="content" id="content">
+
+        <!-- ============ HOME ============ -->
+        <section class="view active" data-view="home">
+          <div class="brand">
+            <div class="mark">Threadwell</div>
+            <div class="stitch" aria-hidden="true"></div>
+            <div class="tag">Beautiful embroidery, made simple.</div>
+          </div>
+          <div class="stack" style="margin-top:20px">
+            <button class="bigtile primary" data-goto="pick" type="button">
+              <span class="emoji">🧵</span>
+              <span class="tt"><b>Stitch a Design</b><span>Pick something and send it</span></span>
+              <span class="chev">›</span>
+            </button>
+            <button class="bigtile" data-goto="pick" type="button">
+              <span class="emoji">🖼️</span>
+              <span class="tt"><b>My Designs</b><span>Everything you already have</span></span>
+              <span class="chev">›</span>
+            </button>
+            <button class="bigtile" data-goto="help" type="button">
+              <span class="emoji">🆘</span>
+              <span class="tt"><b>Help Me</b><span>Stuck? Tap here. Stay calm.</span></span>
+              <span class="chev">›</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============ STEP 1 · PICK ============ -->
+        <section class="view" data-view="pick" data-step="1"
+                 data-speak="Pick a design. What are you looking for? Tap a picture to choose it.">
+          <h1 class="title">Pick a design</h1>
+          <div class="search"><span>🔎</span> What are you looking for? <span class="mic">🎙️</span></div>
+          <div class="chips">
+            <button class="chip on" type="button">Flowers</button>
+            <button class="chip" type="button">Holidays</button>
+            <button class="chip" type="button">Words</button>
+          </div>
+          <div class="grid" id="designGrid"></div>
+        </section>
+
+        <!-- ============ STEP 2 · ITEM ============ -->
+        <section class="view" data-view="item" data-step="2"
+                 data-speak="What are you putting it on? Tap the item, like a towel or a t-shirt.">
+          <h1 class="title">What are you<br>putting it on?</h1>
+          <p class="lede">This sets a safe size and the right backing for you.</p>
+          <div class="grid" id="itemGrid"></div>
+        </section>
+
+        <!-- ============ STEP 3 · SIZE ============ -->
+        <section class="view" data-view="size" data-step="3"
+                 data-speak="Choose the size. Medium is 5 inches and fits your hoop. Large is too big, so it is blocked.">
+          <h1 class="title">Choose the size</h1>
+          <div class="preview-card">
+            <span class="fabric-tag">On a towel</span>
+            <span class="motif" id="sizeMotif">🌹</span>
+          </div>
+          <div class="bignum" id="sizeNum">5 in <span style="color:var(--ink-soft);font-weight:700">/ 13 cm</span></div>
+          <div class="fitline"><span class="dot" style="background:var(--go)"></span> ✓ Fits your hoop</div>
+          <div class="three">
+            <button class="opt" data-size="small" type="button"><span class="mark"></span>Small<small>4 in</small></button>
+            <button class="opt on" data-size="medium" type="button"><span class="mark">●</span>Medium<small>5 in</small></button>
+            <button class="opt blocked" data-size="large" type="button" aria-disabled="true"><span class="mark">⚠</span>Large<small>Too big for<br>your hoop</small></button>
+          </div>
+          <button class="go" data-goto="colors" type="button">Continue</button>
+        </section>
+
+        <!-- ============ STEP 4 · COLORS ============ -->
+        <section class="view" data-view="colors" data-step="4"
+                 data-speak="Choose the colors. Pick a look, not a thread number. Your original is saved and safe.">
+          <h1 class="title">Choose the colors</h1>
+          <div class="preview-card" id="colorPreview">
+            <span class="fabric-tag">Preview</span>
+            <span class="motif" id="colorMotif">🌹</span>
+          </div>
+          <div class="safe-chip">🔒 Original saved and safe — this is a copy.</div>
+          <div class="swatches" id="lookGrid"></div>
+          <button class="go" data-goto="stick" type="button" style="margin-top:18px">Continue</button>
+        </section>
+
+        <!-- ============ STEP 5 · STICK ============ -->
+        <section class="view" data-view="stick" data-step="5"
+                 data-speak="Get your USB stick ready. Plug in your stick and tap the big green button.">
+          <h1 class="title" id="stickTitle">Get your USB<br>stick ready</h1>
+          <div class="summary" id="stickSummary">
+            For your <b>Baby Lock Destiny</b><br>Towel · <b>5 in</b> · ✓ fits your hoop
+          </div>
+          <ul class="checklist" id="checklist" hidden>
+            <li data-c><span class="box">✓</span> Right format</li>
+            <li data-c><span class="box">✓</span> Unzipped</li>
+            <li data-c><span class="box">✓</span> In the right place</li>
+            <li data-c><span class="box">✓</span> Fits your hoop</li>
+          </ul>
+          <div class="success" id="stickSuccess" hidden>
+            <div class="party">🎉</div>
+            <h2>Ready!</h2>
+            <p>Take this stick to your Destiny.</p>
+            <div class="stick-illo">💾 ➜ 🪡</div>
+            <button class="go ghost" data-goto="home" type="button">Do another one</button>
+          </div>
+          <button class="go" id="makeStick" type="button">MAKE MY STICK</button>
+        </section>
+
+        <!-- ============ HELP ============ -->
+        <section class="view" data-view="help"
+                 data-speak="Help me. Stay calm. Tap the thing that is happening.">
+          <h1 class="title">Help me</h1>
+          <p class="lede">Stay calm. Tap what's happening.</p>
+          <div class="stack">
+            <button class="bigtile" data-help="nofind" type="button"><span class="emoji">❓</span><span class="tt"><b>Machine shows no designs</b><span>Nothing on the screen?</span></span><span class="chev">›</span></button>
+            <button class="bigtile" data-help="break" type="button"><span class="emoji">🧵</span><span class="tt"><b>My thread keeps breaking</b><span>Snapping over and over</span></span><span class="chev">›</span></button>
+            <button class="bigtile" data-help="hoop" type="button"><span class="emoji">⭕</span><span class="tt"><b>Show me hooping</b><span>Step-by-step</span></span><span class="chev">›</span></button>
+            <button class="bigtile" data-help="call" type="button"><span class="emoji">📞</span><span class="tt"><b>Call my helper</b><span>Reach a family member</span></span><span class="chev">›</span></button>
+          </div>
+          <div id="helpAnswer"></div>
+        </section>
+
+      </div><!-- /content -->
+
+      <!-- bottom progress -->
+      <div class="progress" id="progress" aria-hidden="true"></div>
+    </div><!-- /screen -->
+  </div><!-- /phone -->
+
+  <p class="stage-foot">
+    A <b>real, tappable feel-mockup</b> of Threadwell — the same big tiles, big numbers, and
+    "you can't break it" guardrails from your blueprint. Try the <b>🔊 Read to me</b> button,
+    and watch <b>Large</b> stay blocked on the size screen (the #1 mistake, stopped up front).
+    Open this link on your mom's iPhone 14 to feel it as a real app.
+  </p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var screen  = document.getElementById('screen');
+  var content = document.getElementById('content');
+  var progress= document.getElementById('progress');
+  var reduce  = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  /* ---------- data ---------- */
+  var designs = [
+    {e:'🌹',n:'Rose',    g:['#f8d7de','#f0b3c2']},
+    {e:'🌻',n:'Sunflower',g:['#fdeecb','#f6d47f']},
+    {e:'🦋',n:'Butterfly',g:['#dfe7fb','#b9c7f2']},
+    {e:'❤️',n:'Love',    g:['#fbdada','#f4a9a9']},
+    {e:'⛄',n:'Snowman', g:['#e2f0fa','#c1def0']},
+    {e:'⭐',n:'Star',    g:['#fdf2cf','#f4dd8e']},
+    {e:'🎃',n:'Pumpkin', g:['#ffe4c9','#f7bd85']},
+    {e:'🐾',n:'Paw',     g:['#eae2f6','#cdbde9']}
+  ];
+  var items = [
+    {e:'🧺',n:'Towel'},{e:'👕',n:'T-shirt front'},{e:'👶',n:'Baby onesie'},
+    {e:'👜',n:'Tote bag'},{e:'🧢',n:'Hat'},{e:'✨',n:'Something else'}
+  ];
+  var looks = [
+    {n:'Original',c:['#c0392b','#27ae60','#2980b9']},
+    {n:'Autumn',  c:['#b5651d','#c9302c','#d9a441']},
+    {n:'Ocean',   c:['#1f6f8b','#2a9d8f','#264653']},
+    {n:'Black & White',c:['#222','#777','#bbb']}
+  ];
+  var order = ['home','pick','item','size','colors','stick'];
+
+  /* ---------- state ---------- */
+  var chosen = {design:designs[0], item:'Towel', size:'medium', look:'Original'};
+  var stack = ['home'];
+
+  /* ---------- build picture grids ---------- */
+  var dg = document.getElementById('designGrid');
+  designs.forEach(function(d){
+    var b=document.createElement('button');
+    b.className='pic'; b.type='button';
+    b.innerHTML='<span class="art" style="background:linear-gradient(150deg,'+d.g[0]+','+d.g[1]+')">'+d.e+'</span><b>'+d.n+'</b>';
+    b.addEventListener('click',function(){ chosen.design=d; go('item'); });
+    dg.appendChild(b);
+  });
+  var ig = document.getElementById('itemGrid');
+  items.forEach(function(it){
+    var b=document.createElement('button');
+    b.className='pic'; b.type='button';
+    b.innerHTML='<span class="art" style="background:linear-gradient(150deg,#f3ece0,#e6dcc9)">'+it.e+'</span><b>'+it.n+'</b>';
+    b.addEventListener('click',function(){ chosen.item=it.n; go('size'); });
+    ig.appendChild(b);
+  });
+  var lg = document.getElementById('lookGrid');
+  looks.forEach(function(l,idx){
+    var b=document.createElement('button');
+    b.className='look'+(idx===0?' on':''); b.type='button'; b.dataset.look=l.n;
+    var dots='<span class="dots">'+l.c.map(function(c){return '<i style="background:'+c+'"></i>';}).join('')+'</span>';
+    b.innerHTML=dots+'<span>'+l.n+'</span>';
+    b.addEventListener('click',function(){
+      lg.querySelectorAll('.look').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on'); chosen.look=l.n; paintColorPreview(l);
+    });
+    lg.appendChild(b);
+  });
+
+  /* ---------- progress dots ---------- */
+  function buildProgress(step){
+    progress.innerHTML='';
+    for(var i=1;i<=5;i++){
+      var n=document.createElement('span');
+      n.className='node'+(i<step?' done':i===step?' now':'');
+      progress.appendChild(n);
+      if(i<5){ var s=document.createElement('span'); s.className='seg'+(i<step?' done':''); progress.appendChild(s); }
+    }
+  }
+
+  /* ---------- navigation ---------- */
+  function setView(name){
+    var views=content.querySelectorAll('.view'); var cur=null;
+    views.forEach(function(v){
+      var on=v.dataset.view===name;
+      v.classList.toggle('active',on);
+      if(on) cur=v;
+    });
+    // chrome + progress
+    if(name==='home'){ screen.dataset.chrome='home'; screen.dataset.progress='off'; }
+    else { screen.dataset.chrome='app'; }
+    if(cur && cur.dataset.step){ screen.dataset.progress='on'; buildProgress(parseInt(cur.dataset.step,10)); }
+    else { screen.dataset.progress='off'; }
+    content.scrollTop=0;
+    if(name==='size') refreshSize();
+    if(name==='colors') paintColorPreview(looks[0], true);
+    if(name==='stick') resetStick();
+    if(name==='help') document.getElementById('helpAnswer').innerHTML='';
+    stopSpeak();
+  }
+  function go(name){
+    if(name==='home'){ stack=['home']; }
+    else if(stack[stack.length-1]!==name){ stack.push(name); }
+    setView(name);
+  }
+  function back(){
+    if(stack.length>1){ stack.pop(); setView(stack[stack.length-1]); }
+  }
+
+  document.getElementById('btnBack').addEventListener('click',back);
+  document.getElementById('btnHome').addEventListener('click',function(){ go('home'); });
+
+  content.addEventListener('click',function(ev){
+    var t=ev.target.closest('[data-goto]');
+    if(t){ go(t.getAttribute('data-goto')); }
+  });
+
+  /* ---------- size screen ---------- */
+  function refreshSize(){
+    document.getElementById('sizeMotif').textContent=chosen.design.e;
+    var sm=document.querySelectorAll('#screen .opt[data-size]');
+    sm.forEach(function(o){ if(o.dataset.size!=='large') o.classList.toggle('on',o.dataset.size===chosen.size); });
+    updateNum();
+  }
+  function updateNum(){
+    var num=document.getElementById('sizeNum');
+    if(chosen.size==='small') num.innerHTML='4 in <span style="color:var(--ink-soft);font-weight:700">/ 10 cm</span>';
+    else num.innerHTML='5 in <span style="color:var(--ink-soft);font-weight:700">/ 13 cm</span>';
+  }
+  document.querySelectorAll('#screen .opt[data-size]').forEach(function(o){
+    o.addEventListener('click',function(){
+      if(o.classList.contains('blocked')){ nudge(o); return; }
+      chosen.size=o.dataset.size;
+      document.querySelectorAll('#screen .opt[data-size]').forEach(function(x){
+        if(!x.classList.contains('blocked')) x.classList.remove('on');
+      });
+      o.classList.add('on'); updateNum();
+    });
+  });
+  function nudge(el){
+    if(reduce) return;
+    el.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});
+  }
+
+  /* ---------- colors screen ---------- */
+  function paintColorPreview(l, keepSel){
+    document.getElementById('colorMotif').textContent=chosen.design.e;
+    var pv=document.getElementById('colorPreview');
+    pv.style.background='linear-gradient(150deg,'+tint(l.c[0])+','+tint(l.c[1]||l.c[0])+')';
+    if(keepSel){
+      lg.querySelectorAll('.look').forEach(function(x){ x.classList.toggle('on',x.dataset.look===chosen.look); });
+    }
+  }
+  function tint(hex){
+    // lighten a hex toward a soft fabric tone
+    var h=hex.replace('#',''); if(h.length===3){h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];}
+    var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);
+    r=Math.round(r+(255-r)*0.72); g=Math.round(g+(255-g)*0.72); b=Math.round(b+(255-b)*0.72);
+    return 'rgb('+r+','+g+','+b+')';
+  }
+
+  /* ---------- stick screen ---------- */
+  var makeBtn=document.getElementById('makeStick');
+  var checklist=document.getElementById('checklist');
+  var stickSuccess=document.getElementById('stickSuccess');
+  function resetStick(){
+    document.getElementById('stickSummary').innerHTML=
+      'For your <b>Baby Lock Destiny</b><br>'+chosen.item+' · <b>'+(chosen.size==='small'?'4 in':'5 in')+'</b> · ✓ fits your hoop';
+    checklist.hidden=true; stickSuccess.hidden=true; makeBtn.hidden=false;
+    checklist.querySelectorAll('li').forEach(function(li){li.classList.remove('done');});
+    document.getElementById('stickTitle').innerHTML='Get your USB<br>stick ready';
+  }
+  makeBtn.addEventListener('click',function(){
+    makeBtn.hidden=true; checklist.hidden=false;
+    document.getElementById('stickTitle').textContent='Getting it ready…';
+    screen.dataset.progress='off';
+    var lis=checklist.querySelectorAll('li'); var i=0;
+    function step(){
+      if(i<lis.length){ lis[i].classList.add('done'); i++; setTimeout(step, reduce?60:520); }
+      else { setTimeout(finish, reduce?60:420); }
+    }
+    step();
+    function finish(){
+      checklist.hidden=true; stickSuccess.hidden=false;
+      document.getElementById('stickTitle').textContent='All done';
+      speak('Ready! Take this stick to your Destiny.');
+    }
+  });
+
+  /* ---------- help answers ---------- */
+  var helpText={
+    nofind:'Your stick is probably in a folder or still zipped. Tap <b>Get my stick ready</b> and I will fix the format and put the files in the right place.',
+    break:'Most often the machine just needs re-threading. Lift the foot, take the thread out, and thread it again slowly. Still breaking? I will walk you through it.',
+    hoop:'Lay the big hoop down, smooth the fabric on top, press the inner ring in, and tighten the screw. It should feel like a trampoline — not a guitar string.',
+    call:'This would call the family helper you saved — one big button, no dialing.'
+  };
+  document.querySelectorAll('#screen [data-help]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var a=document.getElementById('helpAnswer');
+      a.innerHTML='<div class="answer">'+helpText[b.dataset.help]+'</div>';
+      a.querySelector('.answer').scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});
+    });
+  });
+
+  /* ---------- read-aloud (real Web Speech API) ---------- */
+  function stopSpeak(){ if('speechSynthesis' in window) window.speechSynthesis.cancel(); }
+  function speak(text){
+    if(!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(text); u.rate=.94; u.pitch=1;
+    window.speechSynthesis.speak(u);
+  }
+  document.getElementById('btnRead').addEventListener('click',function(){
+    var cur=content.querySelector('.view.active');
+    var txt=cur && cur.dataset.speak;
+    if(!txt && cur){ var h=cur.querySelector('.title'); txt=h?h.textContent:''; }
+    if(txt) speak(txt);
+  });
+
+  /* ---------- init ---------- */
+  setView('home');
+})();
+</script>

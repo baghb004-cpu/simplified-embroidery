@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Builds / bundles
+dist/
+build/
+out/
+.next/
+.netlify/
+
+# Rust / Tauri (Windows app)
+target/
+apps/windows/src-tauri/target/
+
+# Python (engine)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Secrets & env
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Generated embroidery test output
+*.pes.tmp
+/scratch/
+/test-output/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
