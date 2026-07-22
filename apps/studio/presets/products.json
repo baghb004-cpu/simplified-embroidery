@@ -11,10 +11,10 @@
              },
     "counts":  {
                    "total_site_products":  751,
-                   "embroiderable":  137,
+                   "embroiderable":  136,
                    "by_type":  {
                                    "shirt":  44,
-                                   "jacket_suit":  59,
+                                   "jacket_suit":  58,
                                    "vest":  26,
                                    "cummerbund":  3,
                                    "pocket_square":  5
@@ -850,15 +850,6 @@
                          "line":  "mens",
                          "christening":  false,
                          "default_panel":  "back"
-                     },
-                     {
-                         "name":  "Black Business Suit Rental",
-                         "url":  "https://www.tuxedosonline.com/black-business-suit-rental.html/",
-                         "img":  "https://www.tuxedosonline.com/wp-content/uploads/2020/10/black-suit.jpg",
-                         "type":  "jacket_suit",
-                         "line":  "mens",
-                         "christening":  false,
-                         "default_panel":  "interior_lining"
                      },
                      {
                          "name":  "Charcoal Twilight Tuxedo By Jean Yves",

@@ -24,6 +24,7 @@ function Get-Name($slug) {
 # Classify on the SLUG only (never the URL - the domain 'tuxedosonline' contains 'tuxedo')
 function Get-Type($slug) {
   $s = $slug.ToLower()
+  if ($s -match 'rental|rent-') { return $null }   # rentals can't take permanent embroidery
   if ($s -match 'pocket.?square|hank(y|ie)|handkerchief') { return 'pocket_square' }
   if ($s -match 'cummerbund') { return 'cummerbund' }
   if ($s -match 'vest')       { return 'vest' }
