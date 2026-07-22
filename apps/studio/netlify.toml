@@ -1,0 +1,11 @@
+# Netlify config for Threadwell Studio (static site).
+# In the Netlify UI, set the site's "Base directory" to: apps/studio
+[build]
+  publish = "."
+  command = ""
+
+# SPA-style: everything is one page; no rewrites needed since it's a single index.html.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
